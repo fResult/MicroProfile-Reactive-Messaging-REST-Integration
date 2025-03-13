@@ -13,7 +13,10 @@ package io.openliberty.guides.inventory;
 
 import io.openliberty.guides.models.PropertyMessage;
 import io.openliberty.guides.models.SystemLoad;
+import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.FlowableEmitter;
+import io.reactivex.rxjava3.core.FlowableOnSubscribe;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -25,6 +28,8 @@ import java.util.Properties;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.reactive.messaging.Outgoing;
+import org.reactivestreams.Publisher;
 
 @ApplicationScoped
 @Path("/inventory")
@@ -98,5 +103,11 @@ public class InventoryResource {
       manager.addSystem(hostId, propertyMessage.key, propertyMessage.value);
       logger.info("Host " + hostId + " was added: " + propertyMessage);
     }
+  }
+
+  @Outgoing("requestSystemProperty")
+  public Publisher<String> sendPropertyName() {
+    FlowableOnSubscribe<String> assignEmitterOnSubscribe = emitter -> propertyNameEmitter = emitter;
+    return Flowable.create(assignEmitterOnSubscribe, BackpressureStrategy.BUFFER);
   }
 }
