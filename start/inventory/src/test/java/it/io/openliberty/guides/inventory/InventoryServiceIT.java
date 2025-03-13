@@ -11,49 +11,56 @@
 // end::copyright[]
 package it.io.openliberty.guides.inventory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Collections;
+import java.util.List;
+import java.time.Duration;
+import java.math.BigDecimal;
+import java.nio.file.Paths;
+import java.util.Properties;
+import java.net.Socket;
 
-import io.openliberty.guides.models.SystemLoad;
-import io.openliberty.guides.models.SystemLoad.SystemLoadSerializer;
-import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.core.GenericType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
-import java.math.BigDecimal;
-import java.net.Socket;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.jboss.resteasy.client.jaxrs.ResteasyClient;
-import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+import jakarta.ws.rs.client.ClientBuilder;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.images.builder.ImageFromDockerfile;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.jboss.resteasy.client.jaxrs.ResteasyClient;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+
+import io.openliberty.guides.models.SystemLoad;
+import io.openliberty.guides.models.SystemLoad.SystemLoadSerializer;
 
 @Testcontainers
 public class InventoryServiceIT {
@@ -61,58 +68,59 @@ public class InventoryServiceIT {
   public static InventoryResourceCleint client;
   public static KafkaProducer<String, SystemLoad> producer;
   public static KafkaConsumer<String, String> propertyConsumer;
-  private static Logger logger = LoggerFactory.getLogger(InventoryServiceIT.class);
-  private static Network network = Network.newNetwork();
+  private final static Logger logger = LoggerFactory.getLogger(InventoryServiceIT.class);
+  private final static Network network = Network.newNetwork();
   private static ImageFromDockerfile inventoryImage =
       new ImageFromDockerfile("inventory:1.0-SNAPSHOT").withDockerfile(Paths.get("./Dockerfile"));
 
-  private static KafkaContainer kafkaContainer =
-      new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest"))
-          .withListener(() -> "kafka:19092")
-          .withNetwork(network);
+    private static KafkaContainer kafkaContainer =
+        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest"))
+            .withListener(() -> "kafka:19092")
+            .withNetwork(network);
 
-  private static GenericContainer<?> inventoryContainer =
-      new GenericContainer(inventoryImage)
-          .withNetwork(network)
-          .withExposedPorts(9085)
-          .waitingFor(Wait.forHttp("/health/ready").forPort(9085))
-          .withStartupTimeout(Duration.ofMinutes(2))
-          .withLogConsumer(new Slf4jLogConsumer(logger))
-          .dependsOn(kafkaContainer);
+    private static GenericContainer<?> inventoryContainer =
+        new GenericContainer(inventoryImage)
+            .withNetwork(network)
+            .withExposedPorts(9085)
+            .waitingFor(Wait.forHttp("/health/ready").forPort(9085))
+            .withStartupTimeout(Duration.ofMinutes(2))
+            .withLogConsumer(new Slf4jLogConsumer(logger))
+            .dependsOn(kafkaContainer);
 
-  private static InventoryResourceCleint createRestClient(String urlPath) {
-    ClientBuilder builder = ResteasyClientBuilder.newBuilder();
-    ResteasyClient client = (ResteasyClient) builder.build();
-    ResteasyWebTarget target = client.target(UriBuilder.fromPath(urlPath));
-    return target.proxy(InventoryResourceCleint.class);
-  }
-
-  private static boolean isServiceRunning(String host, int port) {
-    try {
-      Socket socket = new Socket(host, port);
-      socket.close();
-      return true;
-    } catch (Exception e) {
-      return false;
+    private static InventoryResourceCleint createRestClient(String urlPath) {
+        ClientBuilder builder = ResteasyClientBuilder.newBuilder();
+        ResteasyClient client = (ResteasyClient) builder.build();
+        ResteasyWebTarget target = client.target(UriBuilder.fromPath(urlPath));
+        return target.proxy(InventoryResourceCleint.class);
     }
-  }
+
+    private static boolean isServiceRunning(String host, int port) {
+        try {
+            Socket socket = new Socket(host, port);
+            socket.close();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
   @BeforeAll
   public static void startContainers() {
-
-    String urlPath;
-    if (isServiceRunning("localhost", 9085)) {
-      System.out.println("Testing with mvn liberty:devc");
-      urlPath = "http://localhost:9085";
-    } else {
-      System.out.println("Testing with mvn verify");
-      kafkaContainer.start();
-      inventoryContainer.withEnv(
-          "mp.messaging.connector.liberty-kafka.bootstrap.servers", "kafka:19092");
-      inventoryContainer.start();
-      urlPath =
-          "http://" + inventoryContainer.getHost() + ":" + inventoryContainer.getFirstMappedPort();
-    }
+        String urlPath;
+        if (isServiceRunning("localhost", 9085)) {
+            System.out.println("Testing with mvn liberty:devc");
+            urlPath = "http://localhost:9085";
+        } else {
+            System.out.println("Testing with mvn verify");
+            kafkaContainer.start();
+            inventoryContainer.withEnv(
+                "mp.messaging.connector.liberty-kafka.bootstrap.servers",
+                "kafka:19092");
+            inventoryContainer.start();
+            urlPath = "http://"
+                + inventoryContainer.getHost()
+                + ":" + inventoryContainer.getFirstMappedPort();
+        }
 
     System.out.println("Creating REST client with: " + urlPath);
     client = createRestClient(urlPath);
