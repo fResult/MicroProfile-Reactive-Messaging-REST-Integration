@@ -11,61 +11,53 @@
 // end::copyright[]
 package it.io.openliberty.guides.system;
 
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Properties;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.net.Socket;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.utility.DockerImageName;
-
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 
 import io.openliberty.guides.models.PropertyMessage;
 import io.openliberty.guides.models.PropertyMessage.PropertyMessageDeserializer;
 import io.openliberty.guides.models.SystemLoad;
 import io.openliberty.guides.models.SystemLoad.SystemLoadDeserializer;
+import java.io.IOException;
+import java.net.Socket;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.images.builder.ImageFromDockerfile;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
 public class SystemServiceIT {
 
-    private static Logger logger = LoggerFactory.getLogger(SystemServiceIT.class);
-
-    private static Network network = Network.newNetwork();
-
     public static KafkaConsumer<String, SystemLoad> consumer;
-
     public static KafkaConsumer<String, PropertyMessage> propertyConsumer;
-
     public static KafkaProducer<String, String> propertyProducer;
-
+    private static Logger logger = LoggerFactory.getLogger(SystemServiceIT.class);
+    private static Network network = Network.newNetwork();
     private static ImageFromDockerfile systemImage =
         new ImageFromDockerfile("system:1.0-SNAPSHOT")
             .withDockerfile(Paths.get("./Dockerfile"));
@@ -106,6 +98,13 @@ public class SystemServiceIT {
                 "kafka:19092");
             systemContainer.start();
         }
+    }
+
+    @AfterAll
+    public static void stopContainers() {
+        systemContainer.stop();
+        kafkaContainer.stop();
+        network.close();
     }
 
     @BeforeEach
@@ -181,14 +180,6 @@ public class SystemServiceIT {
             StringSerializer.class.getName());
 
         propertyProducer = new KafkaProducer<String, String>(producerProps);
-    }
-
-
-    @AfterAll
-    public static void stopContainers() {
-        systemContainer.stop();
-        kafkaContainer.stop();
-        network.close();
     }
 
     @AfterEach

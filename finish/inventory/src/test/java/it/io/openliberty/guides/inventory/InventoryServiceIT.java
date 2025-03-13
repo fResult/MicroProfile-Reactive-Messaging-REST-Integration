@@ -14,6 +14,12 @@ package it.io.openliberty.guides.inventory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.openliberty.guides.models.SystemLoad;
+import io.openliberty.guides.models.SystemLoad.SystemLoadSerializer;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.core.GenericType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriBuilder;
 import java.math.BigDecimal;
 import java.net.Socket;
 import java.nio.file.Paths;
@@ -21,7 +27,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -50,26 +55,14 @@ import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import io.openliberty.guides.models.SystemLoad;
-import io.openliberty.guides.models.SystemLoad.SystemLoadSerializer;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.core.GenericType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriBuilder;
-
 @Testcontainers
 public class InventoryServiceIT {
 
-    private static Logger logger = LoggerFactory.getLogger(InventoryServiceIT.class);
-
     public static InventoryResourceCleint client;
-
-    private static Network network = Network.newNetwork();
-
     public static KafkaProducer<String, SystemLoad> producer;
-
     public static KafkaConsumer<String, String> propertyConsumer;
-
+    private static Logger logger = LoggerFactory.getLogger(InventoryServiceIT.class);
+    private static Network network = Network.newNetwork();
     private static ImageFromDockerfile inventoryImage =
         new ImageFromDockerfile("inventory:1.0-SNAPSHOT")
             .withDockerfile(Paths.get("./Dockerfile"));
@@ -128,6 +121,14 @@ public class InventoryServiceIT {
         client = createRestClient(urlPath);
     }
 
+    @AfterAll
+    public static void stopContainers() {
+        client.resetSystems();
+        inventoryContainer.stop();
+        kafkaContainer.stop();
+        network.close();
+    }
+
     @BeforeEach
     public void setUp() {
         Properties producerProps = new Properties();
@@ -179,14 +180,6 @@ public class InventoryServiceIT {
         propertyConsumer = new KafkaConsumer<String, String>(consumerProps);
         propertyConsumer.subscribe(
             Collections.singletonList("request.system.property"));
-    }
-
-    @AfterAll
-    public static void stopContainers() {
-        client.resetSystems();
-        inventoryContainer.stop();
-        kafkaContainer.stop();
-        network.close();
     }
 
     @AfterEach
