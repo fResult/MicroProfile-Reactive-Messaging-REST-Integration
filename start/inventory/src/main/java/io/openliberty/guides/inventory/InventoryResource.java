@@ -96,13 +96,17 @@ public class InventoryResource {
     logger.info("getPropertyMessage: " + propertyMessage);
     final var hostId = propertyMessage.hostname;
 
-    if (manager.getSystem(hostId).isPresent()) {
-      manager.updatePropertyMessage(hostId, propertyMessage.key, propertyMessage.value);
-      logger.info("Host " + hostId + " was updated: " + propertyMessage);
-    } else {
-      manager.addSystem(hostId, propertyMessage.key, propertyMessage.value);
-      logger.info("Host " + hostId + " was added: " + propertyMessage);
-    }
+    manager
+        .getSystem(hostId)
+        .ifPresentOrElse(
+            ignored -> {
+              manager.updatePropertyMessage(hostId, propertyMessage.key, propertyMessage.value);
+              logger.info("Host " + hostId + " was updated: " + propertyMessage);
+            },
+            () -> {
+              manager.addSystem(hostId, propertyMessage.key, propertyMessage.value);
+              logger.info("Host " + hostId + " was added: " + propertyMessage);
+            });
   }
 
   @Outgoing("requestSystemProperty")
