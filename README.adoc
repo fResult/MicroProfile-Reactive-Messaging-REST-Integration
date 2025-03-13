@@ -18,7 +18,8 @@
 :page-tags: ['microprofile', 'jakarta-ee']
 :page-related-guides: ['reactive-service-testing', 'microprofile-reactive-messaging']
 :page-permalink: /guides/{projectid}
-:imagesdir: /img/guide/{projectid}
+// :imagesdir: /img/guide/{projectid}
+:imagesdir: /assets
 :page-seo-title: Integrating RESTful services with a reactive system
 :page-seo-description: A getting started tutorial with examples on how to integrate RESTful Java microservices with a reactive system or event streaming platform like Apache Kafka using Eclipse MicroProfile Reactive Messaging.
 :common-includes: https://raw.githubusercontent.com/OpenLiberty/guides-common/prod
