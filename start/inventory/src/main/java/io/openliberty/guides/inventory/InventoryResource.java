@@ -11,6 +11,7 @@
 // end::copyright[]
 package io.openliberty.guides.inventory;
 
+import io.openliberty.guides.models.PropertyMessage;
 import io.openliberty.guides.models.SystemLoad;
 import io.reactivex.rxjava3.core.FlowableEmitter;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -82,6 +83,20 @@ public class InventoryResource {
     } else {
       manager.addSystem(hostname, sl.loadAverage);
       logger.info("Host " + hostname + " was added: " + sl);
+    }
+  }
+
+  @Incoming("addSystemProperty")
+  public void getPropertyMessage(PropertyMessage propertyMessage) {
+    logger.info("getPropertyMessage: " + propertyMessage);
+    final var hostId = propertyMessage.hostname;
+
+    if (manager.getSystem(hostId).isPresent()) {
+      manager.updatePropertyMessage(hostId, propertyMessage.key, propertyMessage.value);
+      logger.info("Host " + hostId + " was updated: " + propertyMessage);
+    } else {
+      manager.addSystem(hostId, propertyMessage.key, propertyMessage.value);
+      logger.info("Host " + hostId + " was added: " + propertyMessage);
     }
   }
 }
