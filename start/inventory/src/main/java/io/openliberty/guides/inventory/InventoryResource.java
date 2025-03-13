@@ -1,5 +1,5 @@
 // tag::copyright[]
-/*******************************************************************************
+/* ******************************************************************************
  * Copyright (c) 2020, 2024 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -7,18 +7,15 @@
  * http://www.eclipse.org/legal/epl-2.0/
  *
  * SPDX-License-Identifier: EPL-2.0
- *******************************************************************************/
+ ****************************************************************************** */
 // end::copyright[]
 package io.openliberty.guides.inventory;
 
 import io.openliberty.guides.models.SystemLoad;
+import io.reactivex.rxjava3.core.FlowableEmitter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
@@ -32,7 +29,8 @@ import org.eclipse.microprofile.reactive.messaging.Incoming;
 @Path("/inventory")
 public class InventoryResource {
 
-  private static Logger logger = Logger.getLogger(InventoryResource.class.getName());
+  private static final Logger logger = Logger.getLogger(InventoryResource.class.getName());
+  private FlowableEmitter<String> propertyNameEmitter;
 
   @Inject private InventoryManager manager;
 
@@ -53,6 +51,19 @@ public class InventoryResource {
       return Response.status(Response.Status.OK).entity(system).build();
     }
     return Response.status(Response.Status.NOT_FOUND).entity("hostname does not exist.").build();
+  }
+
+  @PUT
+  @Path("/data")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.TEXT_PLAIN)
+  public Response updateSystemProperty(String propertyName) {
+    logger.info("updateSystemProperty " + propertyName);
+    propertyNameEmitter.onNext(propertyName);
+
+    return Response.status(Response.Status.OK)
+        .entity("Request successful for the " + propertyName + " property")
+        .build();
   }
 
   @DELETE
