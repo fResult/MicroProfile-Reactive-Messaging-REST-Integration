@@ -11,11 +11,9 @@
 // end::copyright[]
 package io.openliberty.guides.models;
 
-import java.util.Objects;
-
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
-
+import java.util.Objects;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
 

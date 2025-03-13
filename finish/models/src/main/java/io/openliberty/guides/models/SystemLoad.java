@@ -21,60 +21,59 @@ import org.apache.kafka.common.serialization.Serializer;
 
 public class SystemLoad {
 
-    private static final Jsonb JSONB = JsonbBuilder.create();
+  private static final Jsonb JSONB = JsonbBuilder.create();
 
-    public String hostname;
-    public Double loadAverage;
+  public String hostname;
+  public Double loadAverage;
 
-    public SystemLoad(String hostname, Double cpuLoadAvg) {
-        this.hostname = hostname;
-        this.loadAverage = cpuLoadAvg;
+  public SystemLoad(String hostname, Double cpuLoadAvg) {
+    this.hostname = hostname;
+    this.loadAverage = cpuLoadAvg;
+  }
+
+  public SystemLoad() {}
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
-
-    public SystemLoad() {
+    if (!(o instanceof SystemLoad)) {
+      return false;
     }
+    SystemLoad sl = (SystemLoad) o;
+    return Objects.equals(hostname, sl.hostname) && Objects.equals(loadAverage, sl.loadAverage);
+  }
 
+  @Override
+  public int hashCode() {
+    return Objects.hash(hostname, loadAverage);
+  }
+
+  @Override
+  public String toString() {
+    return "CpuLoadAverage: " + JSONB.toJson(this);
+  }
+
+  // tag::SystemLoadSerializer[]
+  public static class SystemLoadSerializer implements Serializer<Object> {
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof SystemLoad)) {
-            return false;
-        }
-        SystemLoad sl = (SystemLoad) o;
-        return Objects.equals(hostname, sl.hostname)
-               && Objects.equals(loadAverage, sl.loadAverage);
+    public byte[] serialize(String topic, Object data) {
+      return JSONB.toJson(data).getBytes();
     }
+  }
 
+  // end::SystemLoadSerializer[]
+
+  // tag::SystemLoadDeserializer[]
+  public static class SystemLoadDeserializer implements Deserializer<SystemLoad> {
     @Override
-    public int hashCode() {
-        return Objects.hash(hostname, loadAverage);
+    public SystemLoad deserialize(String topic, byte[] data) {
+      if (data == null) {
+        return null;
+      }
+      return JSONB.fromJson(new String(data), SystemLoad.class);
     }
-
-    @Override
-    public String toString() {
-        return "CpuLoadAverage: " + JSONB.toJson(this);
-    }
-
-    // tag::SystemLoadSerializer[]
-    public static class SystemLoadSerializer implements Serializer<Object> {
-        @Override
-        public byte[] serialize(String topic, Object data) {
-            return JSONB.toJson(data).getBytes();
-        }
-    }
-    // end::SystemLoadSerializer[]
-
-    // tag::SystemLoadDeserializer[]
-    public static class SystemLoadDeserializer implements Deserializer<SystemLoad> {
-        @Override
-        public SystemLoad deserialize(String topic, byte[] data) {
-            if (data == null) {
-                return null;
-            }
-            return JSONB.fromJson(new String(data), SystemLoad.class);
-        }
-    }
-    // end::SystemLoadDeserializer[]
+  }
+  // end::SystemLoadDeserializer[]
 }
