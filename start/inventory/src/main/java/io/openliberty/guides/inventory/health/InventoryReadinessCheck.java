@@ -11,13 +11,11 @@
 // end::copyright[]
 package io.openliberty.guides.inventory.health;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.logging.Logger;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ConsumerGroupListing;
 import org.apache.kafka.clients.admin.ListConsumerGroupsResult;

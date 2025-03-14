@@ -58,169 +58,146 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 public class InventoryServiceIT {
 
-    public static InventoryResourceCleint client;
-    public static KafkaProducer<String, SystemLoad> producer;
-    public static KafkaConsumer<String, String> propertyConsumer;
-    private static Logger logger = LoggerFactory.getLogger(InventoryServiceIT.class);
-    private static Network network = Network.newNetwork();
-    private static ImageFromDockerfile inventoryImage =
-        new ImageFromDockerfile("inventory:1.0-SNAPSHOT")
-            .withDockerfile(Paths.get("./Dockerfile"));
+  public static InventoryResourceCleint client;
+  public static KafkaProducer<String, SystemLoad> producer;
+  public static KafkaConsumer<String, String> propertyConsumer;
+  private static Logger logger = LoggerFactory.getLogger(InventoryServiceIT.class);
+  private static Network network = Network.newNetwork();
+  private static ImageFromDockerfile inventoryImage =
+      new ImageFromDockerfile("inventory:1.0-SNAPSHOT").withDockerfile(Paths.get("./Dockerfile"));
 
-    private static KafkaContainer kafkaContainer =
-        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest"))
-            .withListener(() -> "kafka:19092")
-            .withNetwork(network);
+  private static KafkaContainer kafkaContainer =
+      new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest"))
+          .withListener(() -> "kafka:19092")
+          .withNetwork(network);
 
-    private static GenericContainer<?> inventoryContainer =
-        new GenericContainer(inventoryImage)
-            .withNetwork(network)
-            .withExposedPorts(9085)
-            .waitingFor(Wait.forHttp("/health/ready").forPort(9085))
-            .withStartupTimeout(Duration.ofMinutes(2))
-            .withLogConsumer(new Slf4jLogConsumer(logger))
-            .dependsOn(kafkaContainer);
+  private static GenericContainer<?> inventoryContainer =
+      new GenericContainer(inventoryImage)
+          .withNetwork(network)
+          .withExposedPorts(9085)
+          .waitingFor(Wait.forHttp("/health/ready").forPort(9085))
+          .withStartupTimeout(Duration.ofMinutes(2))
+          .withLogConsumer(new Slf4jLogConsumer(logger))
+          .dependsOn(kafkaContainer);
 
-    private static InventoryResourceCleint createRestClient(String urlPath) {
-        ClientBuilder builder = ResteasyClientBuilder.newBuilder();
-        ResteasyClient client = (ResteasyClient) builder.build();
-        ResteasyWebTarget target = client.target(UriBuilder.fromPath(urlPath));
-        return target.proxy(InventoryResourceCleint.class);
+  private static InventoryResourceCleint createRestClient(String urlPath) {
+    ClientBuilder builder = ResteasyClientBuilder.newBuilder();
+    ResteasyClient client = (ResteasyClient) builder.build();
+    ResteasyWebTarget target = client.target(UriBuilder.fromPath(urlPath));
+    return target.proxy(InventoryResourceCleint.class);
+  }
+
+  private static boolean isServiceRunning(String host, int port) {
+    try {
+      Socket socket = new Socket(host, port);
+      socket.close();
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  @BeforeAll
+  public static void startContainers() {
+
+    String urlPath;
+    if (isServiceRunning("localhost", 9085)) {
+      System.out.println("Testing with mvn liberty:devc");
+      urlPath = "http://localhost:9085";
+    } else {
+      System.out.println("Testing with mvn verify");
+      kafkaContainer.start();
+      inventoryContainer.withEnv(
+          "mp.messaging.connector.liberty-kafka.bootstrap.servers", "kafka:19092");
+      inventoryContainer.start();
+      urlPath =
+          "http://" + inventoryContainer.getHost() + ":" + inventoryContainer.getFirstMappedPort();
     }
 
-    private static boolean isServiceRunning(String host, int port) {
-        try {
-            Socket socket = new Socket(host, port);
-            socket.close();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+    System.out.println("Creating REST client with: " + urlPath);
+    client = createRestClient(urlPath);
+  }
+
+  @AfterAll
+  public static void stopContainers() {
+    client.resetSystems();
+    inventoryContainer.stop();
+    kafkaContainer.stop();
+    network.close();
+  }
+
+  @BeforeEach
+  public void setUp() {
+    Properties producerProps = new Properties();
+
+    if (isServiceRunning("localhost", 9085)) {
+      producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
+    } else {
+      producerProps.put(
+          ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers());
     }
 
-    @BeforeAll
-    public static void startContainers() {
+    producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+    producerProps.put(
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SystemLoadSerializer.class.getName());
 
-        String urlPath;
-        if (isServiceRunning("localhost", 9085)) {
-            System.out.println("Testing with mvn liberty:devc");
-            urlPath = "http://localhost:9085";
-        } else {
-            System.out.println("Testing with mvn verify");
-            kafkaContainer.start();
-            inventoryContainer.withEnv(
-                "mp.messaging.connector.liberty-kafka.bootstrap.servers",
-                "kafka:19092");
-            inventoryContainer.start();
-            urlPath = "http://"
-                + inventoryContainer.getHost()
-                + ":" + inventoryContainer.getFirstMappedPort();
-        }
+    producer = new KafkaProducer<String, SystemLoad>(producerProps);
 
-        System.out.println("Creating REST client with: " + urlPath);
-        client = createRestClient(urlPath);
+    Properties consumerProps = new Properties();
+
+    if (isServiceRunning("localhost", 9085)) {
+      consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
+    } else {
+      consumerProps.put(
+          ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers());
     }
 
-    @AfterAll
-    public static void stopContainers() {
-        client.resetSystems();
-        inventoryContainer.stop();
-        kafkaContainer.stop();
-        network.close();
+    consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "property-name");
+    consumerProps.put(
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    consumerProps.put(
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+    propertyConsumer = new KafkaConsumer<String, String>(consumerProps);
+    propertyConsumer.subscribe(Collections.singletonList("request.system.property"));
+  }
+
+  @AfterEach
+  public void tearDown() {
+    producer.close();
+    propertyConsumer.close();
+  }
+
+  @Test
+  public void testCpuUsage() throws InterruptedException {
+    SystemLoad sl = new SystemLoad("localhost", 1.1);
+    producer.send(new ProducerRecord<String, SystemLoad>("system.load", sl));
+    Thread.sleep(5000);
+    Response response = client.getSystems();
+    List<Properties> systems = response.readEntity(new GenericType<List<Properties>>() {});
+    assertEquals(200, response.getStatus(), "Response should be 200");
+    assertEquals(systems.size(), 1);
+    for (Properties system : systems) {
+      assertEquals(sl.hostname, system.get("hostname"), "Hostname doesn't match!");
+      BigDecimal systemLoad = (BigDecimal) system.get("systemLoad");
+      assertEquals(sl.loadAverage, systemLoad.doubleValue(), "CPU load doesn't match!");
     }
+  }
 
-    @BeforeEach
-    public void setUp() {
-        Properties producerProps = new Properties();
+  @Test
+  public void testGetProperty() {
+    Response response = client.updateSystemProperty("os.name");
+    assertEquals(200, response.getStatus(), "Response should be 200");
+    ConsumerRecords<String, String> records = propertyConsumer.poll(Duration.ofMillis(4000));
+    System.out.println("Polled " + records.count() + " records from Kafka:");
+    assertTrue(records.count() > 0, "No records polled");
 
-        if (isServiceRunning("localhost", 9085)) {
-            producerProps.put(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9094");
-        } else {
-            producerProps.put(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                kafkaContainer.getBootstrapServers());
-        }
-
-        producerProps.put(
-            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-            StringSerializer.class.getName());
-        producerProps.put(
-            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-            SystemLoadSerializer.class.getName());
-
-        producer = new KafkaProducer<String, SystemLoad>(producerProps);
-
-        Properties consumerProps = new Properties();
-
-        if (isServiceRunning("localhost", 9085)) {
-            consumerProps.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9094");
-        } else {
-            consumerProps.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                kafkaContainer.getBootstrapServers());
-        }
-
-        consumerProps.put(
-            ConsumerConfig.GROUP_ID_CONFIG,
-            "property-name");
-        consumerProps.put(
-            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-            StringDeserializer.class.getName());
-        consumerProps.put(
-            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-            StringDeserializer.class.getName());
-        consumerProps.put(
-            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-            "earliest");
-
-        propertyConsumer = new KafkaConsumer<String, String>(consumerProps);
-        propertyConsumer.subscribe(
-            Collections.singletonList("request.system.property"));
+    for (ConsumerRecord<String, String> record : records) {
+      String p = record.value();
+      System.out.println(p);
+      assertEquals("os.name", p);
     }
-
-    @AfterEach
-    public void tearDown() {
-        producer.close();
-        propertyConsumer.close();
-    }
-
-    @Test
-    public void testCpuUsage() throws InterruptedException {
-        SystemLoad sl = new SystemLoad("localhost", 1.1);
-        producer.send(new ProducerRecord<String, SystemLoad>("system.load", sl));
-        Thread.sleep(5000);
-        Response response = client.getSystems();
-        List<Properties> systems =
-            response.readEntity(new GenericType<List<Properties>>() { });
-        assertEquals(200, response.getStatus(), "Response should be 200");
-        assertEquals(systems.size(), 1);
-        for (Properties system : systems) {
-            assertEquals(sl.hostname, system.get("hostname"),
-                "Hostname doesn't match!");
-            BigDecimal systemLoad = (BigDecimal) system.get("systemLoad");
-            assertEquals(sl.loadAverage, systemLoad.doubleValue(),
-                "CPU load doesn't match!");
-        }
-    }
-
-    @Test
-    public void testGetProperty() {
-        Response response = client.updateSystemProperty("os.name");
-        assertEquals(200, response.getStatus(), "Response should be 200");
-        ConsumerRecords<String, String> records =
-            propertyConsumer.poll(Duration.ofMillis(4000));
-        System.out.println("Polled " + records.count() + " records from Kafka:");
-        assertTrue(records.count() > 0, "No records polled");
-
-        for (ConsumerRecord<String, String> record : records) {
-            String p = record.value();
-            System.out.println(p);
-            assertEquals("os.name", p);
-        }
-        propertyConsumer.commitAsync();
-    }
+    propertyConsumer.commitAsync();
+  }
 }

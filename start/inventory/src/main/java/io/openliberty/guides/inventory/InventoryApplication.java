@@ -11,8 +11,8 @@
 // end::copyright[]
 package io.openliberty.guides.inventory;
 
-import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.ApplicationPath;
+import jakarta.ws.rs.core.Application;
 
 @ApplicationPath("/")
 public class InventoryApplication extends Application {}

@@ -23,21 +23,18 @@ import jakarta.ws.rs.core.Response;
 @Path("/inventory")
 public interface InventoryResourceCleint {
 
-    @GET
-    @Path("/systems")
-    @Produces(MediaType.APPLICATION_JSON)
-    Response getSystems();
+  @GET
+  @Path("/systems")
+  @Produces(MediaType.APPLICATION_JSON)
+  Response getSystems();
 
-    @PUT
-    @Path("/data")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.TEXT_PLAIN)
-    Response updateSystemProperty(
-        String propertyName);
+  @PUT
+  @Path("/data")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.TEXT_PLAIN)
+  Response updateSystemProperty(String propertyName);
 
-    @DELETE
-    @Produces(MediaType.APPLICATION_JSON)
-    Response resetSystems();
-
+  @DELETE
+  @Produces(MediaType.APPLICATION_JSON)
+  Response resetSystems();
 }
-

@@ -1,5 +1,5 @@
 // tag::copyright[]
-/*******************************************************************************
+/* ******************************************************************************
  * Copyright (c) 2020, 2024 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -7,7 +7,7 @@
  * http://www.eclipse.org/legal/epl-2.0/
  *
  * SPDX-License-Identifier: EPL-2.0
- *******************************************************************************/
+ ****************************************************************************** */
 // end::copyright[]
 package io.openliberty.guides.system;
 
@@ -25,26 +25,24 @@ import org.reactivestreams.Publisher;
 
 @ApplicationScoped
 public class SystemService {
-    private static final OperatingSystemMXBean OS_MEAN =
-            ManagementFactory.getOperatingSystemMXBean();
-    private static Logger logger = Logger.getLogger(SystemService.class.getName());
-    private static String hostname = null;
+  private static final OperatingSystemMXBean OS_MEAN = ManagementFactory.getOperatingSystemMXBean();
+  private static Logger logger = Logger.getLogger(SystemService.class.getName());
+  private static String hostname = null;
 
-    private static String getHostname() {
-        if (hostname == null) {
-            try {
-                return InetAddress.getLocalHost().getHostName();
-            } catch (UnknownHostException e) {
-                return System.getenv("HOSTNAME");
-            }
-        }
-        return hostname;
+  private static String getHostname() {
+    if (hostname == null) {
+      try {
+        return InetAddress.getLocalHost().getHostName();
+      } catch (UnknownHostException e) {
+        return System.getenv("HOSTNAME");
+      }
     }
+    return hostname;
+  }
 
-    @Outgoing("systemLoad")
-    public Publisher<SystemLoad> sendSystemLoad() {
-        return Flowable.interval(15, TimeUnit.SECONDS)
-                       .map((interval -> new SystemLoad(getHostname(),
-                             OS_MEAN.getSystemLoadAverage())));
-    }
+  @Outgoing("systemLoad")
+  public Publisher<SystemLoad> sendSystemLoad() {
+    return Flowable.interval(15, TimeUnit.SECONDS)
+        .map((interval -> new SystemLoad(getHostname(), OS_MEAN.getSystemLoadAverage())));
+  }
 }
