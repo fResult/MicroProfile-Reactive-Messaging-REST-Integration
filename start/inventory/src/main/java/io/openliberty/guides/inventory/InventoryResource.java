@@ -35,7 +35,7 @@ import org.reactivestreams.Publisher;
 @Path("/inventory")
 public class InventoryResource {
 
-  private static final Logger logger = Logger.getLogger(InventoryResource.class.getName());
+  private final Logger logger = Logger.getLogger(InventoryResource.class.getName());
   private FlowableEmitter<String> propertyNameEmitter;
 
   @Inject private InventoryManager manager;
@@ -64,8 +64,11 @@ public class InventoryResource {
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.TEXT_PLAIN)
   public Response updateSystemProperty(String propertyName) {
-    logger.info("updateSystemProperty " + propertyName);
-    propertyNameEmitter.onNext(propertyName);
+    logger.info("updateSystemProperty: " + propertyName);
+    Optional.ofNullable(propertyNameEmitter)
+        .ifPresentOrElse(
+            emitter -> emitter.onNext(propertyName),
+            () -> logger.severe("Property name emitter is not initialized."));
 
     return Response.status(Response.Status.OK)
         .entity("Request successful for the " + propertyName + " property")
