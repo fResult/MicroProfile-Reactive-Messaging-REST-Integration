@@ -52,11 +52,11 @@ public class InventoryResource {
   @Path("/systems/{hostname}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSystem(@PathParam("hostname") String hostname) {
-    Optional<Properties> system = manager.getSystem(hostname);
-    if (system.isPresent()) {
-      return Response.status(Response.Status.OK).entity(system).build();
-    }
-    return Response.status(Response.Status.NOT_FOUND).entity("hostname does not exist.").build();
+    return manager
+        .getSystem(hostname)
+        .map(system -> Response.status(Response.Status.OK).entity(system).build())
+        .orElse(
+            Response.status(Response.Status.NOT_FOUND).entity("hostname does not exist.").build());
   }
 
   @PUT
