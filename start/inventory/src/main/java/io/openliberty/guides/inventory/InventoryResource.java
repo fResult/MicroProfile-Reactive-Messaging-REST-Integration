@@ -22,10 +22,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.logging.Logger;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.reactive.messaging.Outgoing;
@@ -44,7 +41,7 @@ public class InventoryResource {
   @Path("/systems")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSystems() {
-    List<Properties> systems = new ArrayList<>(manager.getSystems().values());
+    final var systems = manager.getSystems().values();
     return Response.status(Response.Status.OK).entity(systems).build();
   }
 
