@@ -80,14 +80,14 @@ public class InventoryResource {
   }
 
   @Incoming("systemLoad")
-  public void updateStatus(SystemLoad sl) {
-    String hostname = sl.hostname;
+  public void updateStatus(SystemLoad systemLoad) {
+    String hostname = systemLoad.hostname;
     if (manager.getSystem(hostname).isPresent()) {
-      manager.updateCpuStatus(hostname, sl.loadAverage);
-      logger.info("Host " + hostname + " was updated: " + sl);
+      manager.updateCpuStatus(hostname, systemLoad.loadAverage);
+      logger.info("Host " + hostname + " was updated: " + systemLoad);
     } else {
-      manager.addSystem(hostname, sl.loadAverage);
-      logger.info("Host " + hostname + " was added: " + sl);
+      manager.addSystem(hostname, systemLoad.loadAverage);
+      logger.info("Host " + hostname + " was added: " + systemLoad);
     }
   }
 
