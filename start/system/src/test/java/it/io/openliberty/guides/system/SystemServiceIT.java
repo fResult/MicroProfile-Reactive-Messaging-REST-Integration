@@ -25,13 +25,15 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.net.Socket;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.junit.jupiter.api.Test;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -119,31 +121,23 @@ public class SystemServiceIT {
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SystemLoadDeserializer.class.getName());
     consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-        consumer = new KafkaConsumer<String, SystemLoad>(consumerProps);
-        consumer.subscribe(Collections.singletonList("system.load"));
+    consumer = new KafkaConsumer<String, SystemLoad>(consumerProps);
+    consumer.subscribe(Collections.singletonList("system.load"));
 
-        Properties propertyConsumerProps = new Properties();
-        if (isServiceRunning("localhost", 9083)) {
-            propertyConsumerProps.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9094");
-        } else {
-            propertyConsumerProps.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                kafkaContainer.getBootstrapServers());
-        }
-        propertyConsumerProps.put(
-            ConsumerConfig.GROUP_ID_CONFIG,
-            "property-name");
-        propertyConsumerProps.put(
-            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-            StringDeserializer.class.getName());
-        propertyConsumerProps.put(
-            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-            PropertyMessageDeserializer.class.getName());
-        propertyConsumerProps.put(
-            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-            "earliest");
+    Properties propertyConsumerProps = new Properties();
+    if (isServiceRunning("localhost", 9083)) {
+      propertyConsumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
+    } else {
+      propertyConsumerProps.put(
+          ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers());
+    }
+    propertyConsumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "property-name");
+    propertyConsumerProps.put(
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    propertyConsumerProps.put(
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+        PropertyMessageDeserializer.class.getName());
+    propertyConsumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
     propertyConsumer = new KafkaConsumer<String, PropertyMessage>(propertyConsumerProps);
     propertyConsumer.subscribe(Collections.singletonList("add.system.property"));
