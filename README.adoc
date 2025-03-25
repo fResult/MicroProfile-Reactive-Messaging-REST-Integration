@@ -356,53 +356,53 @@ include::{common-includes}/attribution.adoc[subs="attributes"]
 
 ```mermaid
 graph TD
-    subgraph "Inventory Service"
-        I_REST["/inventory/systems REST Endpoint"]
-        I_DATA["/inventory/data REST Endpoint"]
-        I_RESOURCE[InventoryResource]
-        I_PROP_EMITTER[propertyNameEmitter]
-        I_OUTGOING[requestSystemProperty Channel]
-        I_INCOMING[addSystemProperty Channel]
-    end
+  subgraph "Inventory Service"
+    I_REST["/inventory/systems REST Endpoint"]
+    I_DATA["/inventory/data REST Endpoint"]
+    I_RESOURCE[InventoryResource]
+    I_PROP_EMITTER[propertyNameEmitter]
+    I_OUTGOING[requestSystemProperty Channel]
+    I_INCOMING[addSystemProperty Channel]
+  end
 
-    subgraph "Apache Kafka"
-        K_SYSTEM_LOAD["system.load Topic"]
-        K_REQ_PROP["request.system.property Topic"]
-        K_RES_PROP["response.system.property Topic"]
-    end
+  subgraph "Apache Kafka"
+    K_SYSTEM_LOAD["system.load Topic"]
+    K_REQ_PROP["request.system.property Topic"]
+    K_RES_PROP["response.system.property Topic"]
+  end
 
-    subgraph "System Service"
-        S_SERVICE[SystemService]
-        S_INCOMING[propertyRequest Channel]
-        S_OUTGOING[propertyResponse Channel]
-        S_LOAD[systemLoad Publisher]
-    end
+  subgraph "System Service"
+    S_SERVICE[SystemService]
+    S_INCOMING[propertyRequest Channel]
+    S_OUTGOING[propertyResponse Channel]
+    S_LOAD[systemLoad Publisher]
+  end
 
-    %% Inventory service flows
-    I_DATA -->|"PUT request"| I_RESOURCE
-    I_RESOURCE -->|"emits property name"| I_PROP_EMITTER
-    I_PROP_EMITTER -->|"publishes"| I_OUTGOING
-    I_OUTGOING -->|"sends to"| K_REQ_PROP
-    K_RES_PROP -->|"delivers to"| I_INCOMING
-    I_INCOMING -->|"updates"| I_RESOURCE
-    I_RESOURCE -->|"provides data to"| I_REST
+  %% Inventory service flows
+  I_DATA -->|"PUT request"| I_RESOURCE
+  I_RESOURCE -->|"emits property name"| I_PROP_EMITTER
+  I_PROP_EMITTER -->|"publishes"| I_OUTGOING
+  I_OUTGOING -->|"sends to"| K_REQ_PROP
+  K_RES_PROP -->|"delivers to"| I_INCOMING
+  I_INCOMING -->|"updates"| I_RESOURCE
+  I_RESOURCE -->|"provides data to"| I_REST
 
-    %% System service flows
-    K_REQ_PROP -->|"delivers to"| S_INCOMING
-    S_INCOMING -->|"calls"| S_SERVICE
-    S_SERVICE -->|"publishes response"| S_OUTGOING
-    S_OUTGOING -->|"sends to"| K_RES_PROP
-    S_LOAD -->|"publishes metrics"| K_SYSTEM_LOAD
-    K_SYSTEM_LOAD -->|"delivers to"| I_RESOURCE
+  %% System service flows
+  K_REQ_PROP -->|"delivers to"| S_INCOMING
+  S_INCOMING -->|"calls"| S_SERVICE
+  S_SERVICE -->|"publishes response"| S_OUTGOING
+  S_OUTGOING -->|"sends to"| K_RES_PROP
+  S_LOAD -->|"publishes metrics"| K_SYSTEM_LOAD
+  K_SYSTEM_LOAD -->|"delivers to"| I_RESOURCE
 
-    %% Visual styles
-    classDef kafka fill:#f9a,stroke:#333,stroke-width:2px
-    classDef service fill:#adf,stroke:#333,stroke-width:1px
-    classDef endpoint fill:#dfd,stroke:#333,stroke-width:1px
-    classDef channel fill:#bbf,stroke:#33f,stroke-width:1px,stroke-dasharray:5 5
+  %% Visual styles
+  classDef kafka fill:#f9a,stroke:#333,stroke-width:2px
+  classDef service fill:#adf,stroke:#333,stroke-width:1px
+  classDef endpoint fill:#dfd,stroke:#333,stroke-width:1px
+  classDef channel fill:#bbf,stroke:#33f,stroke-width:1px,stroke-dasharray:5 5
 
-    class K_SYSTEM_LOAD,K_REQ_PROP,K_RES_PROP kafka
-    class I_RESOURCE,S_SERVICE service
-    class I_REST,I_DATA endpoint
-    class I_OUTGOING,I_INCOMING,S_INCOMING,S_OUTGOING,I_PROP_EMITTER,S_LOAD channel
+  class K_SYSTEM_LOAD,K_REQ_PROP,K_RES_PROP kafka
+  class I_RESOURCE,S_SERVICE service
+  class I_REST,I_DATA endpoint
+  class I_OUTGOING,I_INCOMING,S_INCOMING,S_OUTGOING,I_PROP_EMITTER,S_LOAD channel
 ```
